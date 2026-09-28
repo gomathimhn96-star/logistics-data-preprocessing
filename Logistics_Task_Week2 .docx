@@ -1,0 +1,46 @@
+import pandas as pd
+import numpy as np
+
+# 1. Simulate Raw Logistics Dataset with Missing Values and Outliers
+np.random.seed(42)
+raw_data = {
+    'Shipment_ID': [f'SHP_{i}' for i in range(1001, 1016)],
+    'Distance_km': [45, 120, np.nan, 85, 300, 15, 95, np.nan, 450, 60, 110, 25, 70, 5000, 80],  # 5000 is an outlier
+    'Delivery_Time_hrs': [2.5, 6.0, 4.0, np.nan, 15.0, 1.2, 5.5, 3.8, 22.0, 3.0, 5.8, 1.5, 4.2, 250.0, 4.5],  # 250 is an outlier
+    'Fuel_Consumed_L': [5.0, 12.5, 9.0, 8.5, np.nan, 2.0, 10.0, 8.0, 45.0, 6.5, 11.5, 3.0, 7.5, 600.0, 8.2]
+}
+
+df = pd.DataFrame(raw_data)
+print("--- 1. Raw Dataset with Issues ---")
+print(df.head(10))
+
+# 2. Handling Missing Values (Median Imputation)
+numeric_cols = ['Distance_km', 'Delivery_Time_hrs', 'Fuel_Consumed_L']
+for col in numeric_cols:
+    median_val = df[col].median()
+    df[col] = df[col].fillna(median_val)
+
+print("\n--- 2. After Handling Missing Values ---")
+print(df.isnull().sum())
+
+# 3. Handling Outliers using IQR (Interquartile Range) Method
+for col in numeric_cols:
+    Q1 = df[col].quantile(0.25)
+    Q3 = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    # Capping outliers to upper and lower bounds
+    df[col] = np.clip(df[col], lower_bound, upper_bound)
+
+print("\n--- 3. Dataset After Outlier Capping (Summary Stats) ---")
+print(df[numeric_cols].describe())
+
+# 4. Data Normalization (Min-Max Scaling: 0 to 1)
+for col in numeric_cols:
+    min_val = df[col].min()
+    max_val = df[col].max()
+    df[f'{col}_Normalized'] = ((df[col] - min_val) / (max_val - min_val)).round(4)
+
+print("\n--- 4. Cleaned & Preprocessed Data Sample ---")
+print(df[['Shipment_ID', 'Distance_km_Normalized', 'Delivery_Time_hrs_Normalized', 'Fuel_Consumed_L_Normalized']].head())
